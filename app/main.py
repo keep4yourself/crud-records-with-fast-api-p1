@@ -1,3 +1,6 @@
+# this code is part of a series of articles published on
+# keep4yourself.com
+# https://keepforyourself.com/coding/how-to-crud-records-with-fastapi/
 from typing import Optional
 from pydantic import BaseModel
 from fastapi import FastAPI, Request, Response, status
@@ -36,8 +39,8 @@ class RaceCarORM(DB_BASE_ORM):
     team_name = Column(String, index=False)
 
 app = FastAPI(
-    title="Example-02-CRUD-part-2",
-    description="keep-4-yourself-example-03",
+    title="Example-02-CRUD-part-3",
+    description="keep-4-yourself-example-04",
 )
 
 @app.get("/")
@@ -45,14 +48,51 @@ def say_hello():
     return {"hello": "world"}
 
 @app.get("/race-cars")
-def get_all_cars():
-    return {"cars": ["all"]}
+def get_all_cars(
+    request: Request,
+    response: Response,
+):
+    try:
+        race_car_records = DBSession.query(RaceCarORM).filter().all()
+        return {
+            "entries": race_car_records,
+            "total": len(race_car_records)
+        }
+    except Exception as e:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {
+            "entries": [],
+            "total":0, 
+            "error": e,
+            "error_details": e.orig.args if hasattr(e, 'orig') else f"{e}"
+        }
 
 @app.get("/race-cars/{car_id}")
 def get_car(
-    car_id: int
+    car_id: int,
+    request: Request,
+    response: Response,
 ):
-    return {"car": [f"returning details for {car_id}"]}
+    try:
+        race_car_record = DBSession.query(RaceCarORM).filter(RaceCarORM.id == car_id).first()
+        if race_car_record:
+            return {
+                "entries": race_car_record,
+            }
+        else:
+            return {
+                "entries": [],
+                "message": f"No entries found for id: {car_id}"
+            }
+    except Exception as e:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {
+            "entries": [],
+            "id_sent": car_id, 
+            "total": 0,
+            "error": e,
+            "error_details": e.orig.args if hasattr(e, 'orig') else f"{e}"
+        }
 
 @app.put("/race-cars/{car_id}")
 def edit_car(
