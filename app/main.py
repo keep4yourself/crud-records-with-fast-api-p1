@@ -54,11 +54,13 @@ def get_car(
 ):
     return {"car": [f"returning details for {car_id}"]}
 
-@app.put("/race-cars/{car_id}")
+@app.put("/race-cars")
 def edit_car(
-    car_id: int
+    request: Request,
+    response: Response,
+    race_car: RaceCar,
 ):
-    return {"car": [f"editing details for {car_id}"]}
+    return {"car": race_car}
 
 # remove the ending / that will cause a redirect for the post request
 # issue hit by the green guy :D
