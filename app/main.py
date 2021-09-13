@@ -31,6 +31,12 @@ class RaceCar(BaseModel):
     driver_name: str
     team_name: str
 
+class RaceCarUpdate(BaseModel):
+    id: Optional[int] = None
+    car_number: Optional[int]
+    driver_name: Optional[str]
+    team_name: Optional[str]
+
 class RaceCarORM(DB_BASE_ORM):
     __tablename__ = "race_cars"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
@@ -47,6 +53,8 @@ app = FastAPI(
 def say_hello():
     return {"hello": "world"}
 
+#
+# GET all the car records from the database
 @app.get("/race-cars")
 def get_all_cars(
     request: Request,
@@ -66,7 +74,8 @@ def get_all_cars(
             "error": e,
             "error_details": e.orig.args if hasattr(e, 'orig') else f"{e}"
         }
-
+#
+# GET the car record from the database identified by RaceCarORM.id = car_id
 @app.get("/race-cars/{car_id}")
 def get_car(
     car_id: int,
@@ -94,14 +103,30 @@ def get_car(
             "error_details": e.orig.args if hasattr(e, 'orig') else f"{e}"
         }
 
+#
+# UPDATE the database record that is identified by RaceCarORM.id = race_car.id
 @app.put("/race-cars")
 def edit_car(
     request: Request,
     response: Response,
-    race_car: RaceCar,
+    race_car: RaceCarUpdate,
 ):
-    return {"car": race_car}
+    message = ""
+    try:
+        if not race_car.id:
+            raise Exception("missing id")
+        race_car_record = DBSession.query(RaceCarORM).\
+        filter(RaceCarORM.id == race_car.id).\
+        update(dict(race_car))                            
+        message="Record correctly updated"
+    except Exception as e:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        message = "{}".format(e)
+    
+    return {"car": race_car, "message": message}
 
+#
+# CREATE a new dabase record
 # remove the ending / that will cause a redirect for the post request
 # issue hit by the green guy :D
 @app.post("/race-cars")
@@ -125,6 +150,8 @@ def create_car(
             "error_details": e.orig.args if hasattr(e, 'orig') else f"{e}"
         }
 
+#
+# DELETE the record from the datbase that is idenfified by RaceCarORM.id = car_id
 @app.delete("/race-cars/{car_id}")
 def delete_car(
     car_id: int
