@@ -3,7 +3,7 @@
 # https://keepforyourself.com/coding/how-to-crud-records-with-fastapi/
 from typing import Optional
 from pydantic import BaseModel
-from fastapi import FastAPI, Request, Response, status
+from fastapi import FastAPI, Request, Response, status, HTTPException
 # declarative_base class, Column, Integer and String
 # will all be used for the race_car table model
 from sqlalchemy.ext.declarative import declarative_base
@@ -72,7 +72,7 @@ def get_all_cars(
             "entries": [],
             "total":0, 
             "error": e,
-            "error_details": e.orig.args if hasattr(e, 'orig') else f"{e}"
+            "detail": e.orig.args if hasattr(e, 'orig') else f"{e}"
         }
 #
 # GET the car record from the database identified by RaceCarORM.id = car_id
@@ -100,7 +100,7 @@ def get_car(
             "id_sent": car_id, 
             "total": 0,
             "error": e,
-            "error_details": e.orig.args if hasattr(e, 'orig') else f"{e}"
+            "detail": e.orig.args if hasattr(e, 'orig') else f"{e}"
         }
 
 #
@@ -147,13 +147,29 @@ def create_car(
         response.status_code = status.HTTP_400_BAD_REQUEST
         return {
             "error": e,
-            "error_details": e.orig.args if hasattr(e, 'orig') else f"{e}"
+            "detail": e.orig.args if hasattr(e, 'orig') else f"{e}"
         }
 
 #
-# DELETE the record from the datbase that is idenfified by RaceCarORM.id = car_id
+# DELETE the record from the database that is idenfied by RaceCarORM.id = car_id
 @app.delete("/race-cars/{car_id}")
 def delete_car(
+    request: Request,
+    response: Response,
     car_id: int
 ):
-    return {"car": [f"delete car {car_id}"]}
+    try:
+        num_rows = DBSession.query(RaceCarORM).filter_by(id=car_id).delete()
+        if num_rows == 0:
+            raise HTTPException(status_code=404, detail="Record not found")
+        DBSession.commit()
+    except HTTPException as e:
+        raise
+    except Exception as e:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {
+            "error": e,
+            "detail": e.orig.args if hasattr(e, 'orig') else f"{e}"
+        }
+    response.status_code = status.HTTP_204_NO_CONTENT
+    return 
